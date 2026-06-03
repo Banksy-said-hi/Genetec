@@ -1,0 +1,43 @@
+using BookManager.Api.Data;
+using BookManager.Api.Data.Seed;
+using BookManager.Api.Services;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+const string CorsPolicy = "frontend";
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+
+builder.Services.AddScoped<IBookService, BookService>();
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddCors(options =>
+    options.AddPolicy(CorsPolicy, policy =>
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+
+var app = builder.Build();
+
+// Apply migrations and seed on startup.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+    await DataSeeder.SeedAsync(db);
+}
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.UseCors(CorsPolicy);
+
+app.MapControllers();
+
+app.Run();
+
+// Exposed so an integration/e2e harness could reference the entry point if needed.
+public partial class Program { }
