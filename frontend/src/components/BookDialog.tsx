@@ -70,7 +70,7 @@ export function BookDialog({ open, mode, bookId, onClose }: BookDialogProps) {
     if (mode === 'create') {
       createBook.mutate(form, { onSuccess: () => onClose() });
     } else if (bookId !== null) {
-      updateBook.mutate(form);
+      updateBook.mutate(form, { onSuccess: () => onClose() });
     }
   };
 

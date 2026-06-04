@@ -29,26 +29,33 @@ test('add a book, edit it, and see the changes in its history', async ({ page })
 
   // --- confirm it appears in the list ---
   await page.getByTestId('book-search').fill(originalTitle);
-  const row = page.locator('.MuiDataGrid-row', { hasText: originalTitle });
+  let row = page.locator('.MuiDataGrid-row', { hasText: originalTitle });
   await expect(row).toBeVisible();
 
-  // --- open it and rename the title ---
+  // --- open it and rename the title (dialog closes on save) ---
   await row.click();
   await expect(page.getByTestId('book-title-input')).toHaveValue(originalTitle);
   await page.getByTestId('book-title-input').fill(renamedTitle);
   await page.getByTestId('book-save').click();
+  await expect(page.getByTestId('book-title-input')).toHaveCount(0);
 
-  // Card reflects the new title after the change is confirmed.
-  await expect(page.getByTestId('book-card-title')).toHaveText(renamedTitle);
+  // The list now shows the renamed title.
+  await page.getByTestId('book-search').fill(renamedTitle);
+  row = page.locator('.MuiDataGrid-row', { hasText: renamedTitle });
+  await expect(row).toBeVisible();
 
-  // --- edit the description ---
+  // --- reopen and edit the description (dialog closes on save) ---
+  await row.click();
   await page.getByTestId('book-description-input').fill(newDescription);
   await page.getByTestId('book-save').click();
+  await expect(page.getByTestId('book-description-input')).toHaveCount(0);
 
-  // Card reflects the new description.
+  // --- reopen and assert the card reflects the new state ---
+  await row.click();
+  await expect(page.getByTestId('book-card-title')).toHaveText(renamedTitle);
   await expect(page.getByTestId('book-card-description')).toHaveText(newDescription);
 
-  // --- assert the change history shows both edits ---
+  // --- and that the change history shows both edits ---
   const history = page.getByTestId('change-history');
   await expect(history.getByText(`Title was changed to "${renamedTitle}"`)).toBeVisible();
   await expect(
