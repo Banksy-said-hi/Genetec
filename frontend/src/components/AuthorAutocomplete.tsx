@@ -22,13 +22,22 @@ export function AuthorAutocomplete({ value, onChange, label = 'Authors' }: Autho
     <Autocomplete
       multiple
       freeSolo
+      // Commit the typed text as a new author on Enter or when focus leaves the field,
+      // so a brand-new name doesn't need an explicit dropdown pick. The server find-or-creates it.
+      autoSelect
+      handleHomeEndKeys
+      selectOnFocus
       options={options}
       value={value}
       inputValue={inputValue}
       // The server already filters; don't filter again on the client.
       filterOptions={(opts) => opts}
       onInputChange={(_, next) => setInputValue(next)}
-      onChange={(_, next) => onChange(next as string[])}
+      onChange={(_, next) => {
+        // De-duplicate and drop blanks (a name may match both an option and the typed text).
+        const names = (next as string[]).map((n) => n.trim()).filter(Boolean);
+        onChange(Array.from(new Set(names)));
+      }}
       loading={isFetching}
       data-testid="author-autocomplete"
       renderInput={(params) => (

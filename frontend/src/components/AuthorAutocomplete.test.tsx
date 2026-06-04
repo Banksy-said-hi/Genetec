@@ -29,4 +29,28 @@ describe('AuthorAutocomplete', () => {
     renderWithProviders(<AuthorAutocomplete value={['Existing Author']} onChange={vi.fn()} />);
     expect(screen.getByText('Existing Author')).toBeInTheDocument();
   });
+
+  it('creates a brand-new author from typed text on Enter', async () => {
+    const onChange = vi.fn();
+    renderWithProviders(<AuthorAutocomplete value={[]} onChange={onChange} />);
+
+    await userEvent.type(screen.getByTestId('author-input'), 'Sina{Enter}');
+
+    expect(onChange).toHaveBeenCalledWith(['Sina']);
+  });
+
+  it('commits typed text as a new author when focus leaves the field', async () => {
+    const onChange = vi.fn();
+    renderWithProviders(
+      <>
+        <AuthorAutocomplete value={[]} onChange={onChange} />
+        <button type="button">elsewhere</button>
+      </>,
+    );
+
+    await userEvent.type(screen.getByTestId('author-input'), 'Sina');
+    await userEvent.click(screen.getByText('elsewhere')); // blur the autocomplete
+
+    expect(onChange).toHaveBeenCalledWith(['Sina']);
+  });
 });
