@@ -13,7 +13,7 @@ interface DialogState {
 }
 
 export default function App() {
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ page: 0, pageSize: 10 });
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ page: 0, pageSize: 20 });
   const [sortModel, setSortModel] = useState<GridSortModel>([{ field: 'title', sort: 'asc' }]);
   const [search, setSearch] = useState('');
   const [dialog, setDialog] = useState<DialogState | null>(null);

@@ -19,9 +19,9 @@ function book(id: number, title: string): Book {
 function setup(overrides: Partial<Parameters<typeof BookList>[0]> = {}) {
   const props = {
     rows: [book(1, 'The Hobbit'), book(2, 'War and Peace')],
-    rowCount: 25,
+    rowCount: 45,
     loading: false,
-    paginationModel: { page: 0, pageSize: 10 } as GridPaginationModel,
+    paginationModel: { page: 0, pageSize: 20 } as GridPaginationModel,
     onPaginationModelChange: vi.fn(),
     sortModel: [] as GridSortModel,
     onSortModelChange: vi.fn(),

@@ -69,19 +69,20 @@ export function BookList({
         sx={{ mb: 2 }}
         slotProps={{ htmlInput: { 'data-testid': 'book-search' } }}
       />
-      <Box sx={{ height: 640, width: '100%', bgcolor: 'background.paper' }}>
+      <Box sx={{ width: '100%', bgcolor: 'background.paper' }}>
         <DataGrid
           rows={rows}
           columns={columns}
           loading={loading}
           rowCount={rowCount}
+          autoHeight
           paginationMode="server"
           sortingMode="server"
           paginationModel={paginationModel}
           onPaginationModelChange={onPaginationModelChange}
           sortModel={sortModel}
           onSortModelChange={onSortModelChange}
-          pageSizeOptions={[10]}
+          pageSizeOptions={[20]}
           disableColumnFilter
           disableRowSelectionOnClick
           onRowClick={(params: GridRowParams<Book>) => onRowClick(params.row.id)}
