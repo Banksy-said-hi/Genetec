@@ -12,6 +12,64 @@ All pagination/filtering/ordering is executed **server-side in Postgres**. The c
 each book lives in `Books`; every edit is diffed and written as one row per changed field into
 `BookChanges`, with a precomputed human-readable sentence (e.g. `Title was changed to "The Hobbit"`).
 
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph FE["Frontend — React 19 + MUI (Vite)"]
+    direction TB
+    UI["Components<br/>BookList · BookDialog · BookCard<br/>AuthorAutocomplete · ChangeHistory"]
+    Hooks["React Query hooks<br/>useBooks · useBook<br/>useBookChanges · useAuthorSearch"]
+    Client["Typed fetch client"]
+    UI --> Hooks --> Client
+  end
+
+  subgraph BE["API — ASP.NET Core .NET 10 · Swagger"]
+    direction TB
+    Ctrl["Controllers<br/>Books · Authors"]
+    Svc["BookService<br/>server-side page / filter / sort"]
+    Diff["BookChangeFactory + ChangeDescriber<br/>diff → one row per changed field"]
+    EF["EF Core · AppDbContext"]
+    Ctrl --> Svc
+    Svc --> Diff
+    Svc --> EF
+    Diff --> EF
+  end
+
+  subgraph DB["PostgreSQL"]
+    direction TB
+    Tables["Books · Authors · BookAuthor<br/>BookChanges (append-only log)"]
+  end
+
+  Client -->|"REST / JSON"| Ctrl
+  EF -->|"SQL"| Tables
+```
+
+### Change-log write flow (PUT)
+
+```mermaid
+sequenceDiagram
+  actor U as User
+  participant FE as React (BookDialog)
+  participant API as BooksController
+  participant SVC as BookService
+  participant F as BookChangeFactory
+  participant DB as PostgreSQL
+
+  U->>FE: Edit fields, click Save
+  FE->>API: PUT /books/{id}
+  API->>SVC: UpdateBookAsync(id, input)
+  SVC->>DB: load book + current authors
+  SVC->>F: diff old vs new (single UTC timestamp)
+  F-->>SVC: one BookChange per changed field
+  SVC->>DB: persist book + change rows (one transaction)
+  SVC-->>API: updated book
+  API-->>FE: 200 OK + book
+  Note over FE: React Query invalidates book + changes
+  FE->>API: GET /books/{id}/changes
+  API-->>FE: history (filtered / ordered / grouped by date)
+```
+
 ---
 
 ## Prerequisites
