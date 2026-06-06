@@ -1,37 +1,45 @@
 import { useState } from 'react';
 import { AppBar, Box, Button, Container, Toolbar, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import type { GridPaginationModel, GridSortModel } from '@mui/x-data-grid';
 import { BookList } from './components/BookList';
 import { BookDialog } from './components/BookDialog';
 import { useBooks } from './hooks/useBooks';
 import { useDebouncedValue } from './hooks/useAuthorSearch';
+import type { DialogMode, SortDir } from './api/types';
 
 interface DialogState {
-  mode: 'create' | 'edit';
+  mode: DialogMode;
   bookId: number | null;
 }
 
+const PAGE_SIZE = 20;
+
 export default function App() {
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ page: 0, pageSize: 20 });
-  const [sortModel, setSortModel] = useState<GridSortModel>([{ field: 'title', sort: 'asc' }]);
+  const [page, setPage] = useState(1); // 1-indexed, matching the API and MUI Pagination
+  const [sortField, setSortField] = useState('title');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [search, setSearch] = useState('');
   const [dialog, setDialog] = useState<DialogState | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 300);
-  const sort = sortModel[0];
 
   const { data, isFetching } = useBooks({
-    page: paginationModel.page + 1,
-    pageSize: paginationModel.pageSize,
-    sort: sort?.field,
-    dir: (sort?.sort as 'asc' | 'desc' | undefined) ?? undefined,
+    page,
+    pageSize: PAGE_SIZE,
+    sort: sortField,
+    dir: sortDir,
     search: debouncedSearch,
   });
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
-    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    setPage(1);
+  };
+
+  const handleSortChange = (field: string, dir: SortDir) => {
+    setSortField(field);
+    setSortDir(dir);
+    setPage(1);
   };
 
   return (
@@ -57,10 +65,12 @@ export default function App() {
           rows={data?.items ?? []}
           rowCount={data?.totalCount ?? 0}
           loading={isFetching}
-          paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
-          sortModel={sortModel}
-          onSortModelChange={setSortModel}
+          page={page}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+          sortField={sortField}
+          sortDir={sortDir}
+          onSortChange={handleSortChange}
           search={search}
           onSearchChange={handleSearchChange}
           onRowClick={(id) => setDialog({ mode: 'edit', bookId: id })}

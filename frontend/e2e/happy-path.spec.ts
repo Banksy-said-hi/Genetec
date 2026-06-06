@@ -29,7 +29,7 @@ test('add a book, edit it, and see the changes in its history', async ({ page })
 
   // --- confirm it appears in the list ---
   await page.getByTestId('book-search').fill(originalTitle);
-  let row = page.locator('.MuiDataGrid-row', { hasText: originalTitle });
+  let row = page.getByTestId('book-row').filter({ hasText: originalTitle });
   await expect(row).toBeVisible();
 
   // --- open it and rename the title (dialog closes on save) ---
@@ -41,7 +41,7 @@ test('add a book, edit it, and see the changes in its history', async ({ page })
 
   // The list now shows the renamed title.
   await page.getByTestId('book-search').fill(renamedTitle);
-  row = page.locator('.MuiDataGrid-row', { hasText: renamedTitle });
+  row = page.getByTestId('book-row').filter({ hasText: renamedTitle });
   await expect(row).toBeVisible();
 
   // --- reopen and edit the description (dialog closes on save) ---
