@@ -28,3 +28,7 @@ blob-report/
 .DS_Store
 .idea/
 .vscode/
+
+# Task brief (not part of the deliverable)
+book-change-history-spec.pdf
+task_description_fullstack.txt
