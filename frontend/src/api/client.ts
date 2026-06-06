@@ -21,8 +21,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Request to ${path} failed (${response.status}): ${body}`);
+    // Surface a status-based generic message; never echo the raw response body, which can
+    // contain server internals. (Future: parse ProblemDetails for field-level detail — see README.)
+    const message =
+      response.status >= 500
+        ? 'Something went wrong. Please try again.'
+        : `Request failed (${response.status}).`;
+    throw new Error(message);
   }
 
   if (response.status === 204) return undefined as T;
