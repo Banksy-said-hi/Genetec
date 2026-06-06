@@ -8,6 +8,7 @@ import type {
   PagedResult,
 } from './types';
 
+/** Typed client for the book endpoints (list, get, create, update, change history). */
 export const booksApi = {
   list: (params: BookListParams) =>
     http.get<PagedResult<Book>>(`/books${buildQuery({ ...params })}`),

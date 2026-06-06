@@ -3,6 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { authorsApi } from '../api/authors';
 import { queryKeys } from './keys';
 
+/**
+ * Returns a debounced copy of a value that only updates after it has been stable for `delayMs`.
+ *
+ * @param value - The value to debounce.
+ * @param delayMs - Quiet period in milliseconds before the debounced value updates.
+ * @returns The latest value, delayed until input settles.
+ */
 export function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
