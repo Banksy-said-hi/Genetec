@@ -1,3 +1,4 @@
+using System.Reflection;
 using BookManager.Api.Data;
 using BookManager.Api.Data.Seed;
 using BookManager.Api.Services;
@@ -14,7 +15,14 @@ builder.Services.AddScoped<IBookService, BookService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    // Surface the XML /// summaries on controllers and DTOs in the Swagger UI.
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+        options.IncludeXmlComments(xmlPath);
+});
 
 builder.Services.AddCors(options =>
     options.AddPolicy(CorsPolicy, policy =>

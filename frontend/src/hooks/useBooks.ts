@@ -11,6 +11,12 @@ import { queryKeys } from './keys';
 
 const BOOKS_STALE_TIME = 30_000;
 
+/**
+ * Fetches a page of books and prefetches the adjacent pages so paging is served from cache.
+ *
+ * @param params - Paging, sort and search parameters.
+ * @returns The React Query result for the book page.
+ */
 export function useBooks(params: BookListParams) {
   const qc = useQueryClient();
 
@@ -46,6 +52,12 @@ export function useBooks(params: BookListParams) {
   return query;
 }
 
+/**
+ * Fetches a single book; disabled while `id` is null.
+ *
+ * @param id - Book id, or null to skip the query.
+ * @returns The React Query result for the book.
+ */
 export function useBook(id: number | null) {
   return useQuery({
     queryKey: queryKeys.book(id ?? 0),
@@ -54,6 +66,13 @@ export function useBook(id: number | null) {
   });
 }
 
+/**
+ * Fetches a page of a book's change history; disabled while `id` is null.
+ *
+ * @param id - Book id, or null to skip the query.
+ * @param params - Paging, filter and order parameters.
+ * @returns The React Query result for the change-history page.
+ */
 export function useBookChanges(id: number | null, params: ChangesParams) {
   return useQuery({
     queryKey: queryKeys.changes(id ?? 0, params),
@@ -62,6 +81,11 @@ export function useBookChanges(id: number | null, params: ChangesParams) {
   });
 }
 
+/**
+ * Mutation that creates a book and invalidates the book list on success.
+ *
+ * @returns The React Query mutation.
+ */
 export function useCreateBook() {
   const qc = useQueryClient();
   return useMutation({
@@ -72,6 +96,12 @@ export function useCreateBook() {
   });
 }
 
+/**
+ * Mutation that updates a book and invalidates the list, the book and its change history on success.
+ *
+ * @param id - Book id to update.
+ * @returns The React Query mutation.
+ */
 export function useUpdateBook(id: number) {
   const qc = useQueryClient();
   return useMutation({

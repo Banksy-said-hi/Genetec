@@ -5,7 +5,7 @@ namespace BookManager.Api.Services;
 /// <summary>
 /// Diffs a book's old state against the incoming state and produces one change row per changed
 /// field. Pure and DB-free so it is fully unit-testable. All rows from a single save share the
-/// one <paramref name="timestamp"/> passed in; no change produces an empty list.
+/// one <c>timestamp</c> passed in; no change produces an empty list.
 /// </summary>
 public static class BookChangeFactory
 {

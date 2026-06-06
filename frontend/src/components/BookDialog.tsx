@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
   CircularProgress,
@@ -11,7 +12,7 @@ import {
   Stack,
   TextField,
 } from '@mui/material';
-import type { BookInput } from '../api/types';
+import type { BookInput, DialogMode } from '../api/types';
 import { useBook, useBookChanges, useCreateBook, useUpdateBook } from '../hooks/useBooks';
 import { AuthorAutocomplete } from './AuthorAutocomplete';
 import { BookCard } from './BookCard';
@@ -19,19 +20,30 @@ import { ChangeHistory } from './ChangeHistory';
 
 interface BookDialogProps {
   open: boolean;
-  mode: 'create' | 'edit';
+  mode: DialogMode;
   bookId: number | null;
   onClose: () => void;
 }
 
-const CHANGES_PAGE_SIZE = 5;
+// Show up to 10 changes per page; the pager only appears when a book has more than 10.
+const CHANGES_PAGE_SIZE = 10;
+
+// Field limits mirror the server-side bounds on BookInput so the UI can't exceed them.
+const TITLE_MAX_LENGTH = 500;
+const DESCRIPTION_MAX_LENGTH = 2000;
 const emptyForm: BookInput = { title: '', shortDescription: '', publishDate: '', authorNames: [] };
 
+/**
+ * Create/edit dialog for a book. In edit mode it also shows the book card and its paged change
+ * history. Enforces the server's input bounds in the UI and surfaces save failures inline.
+ */
 export function BookDialog({ open, mode, bookId, onClose }: BookDialogProps) {
   const isEdit = mode === 'edit' && bookId !== null;
 
   const [form, setForm] = useState<BookInput>(emptyForm);
   const [changesPage, setChangesPage] = useState(1);
+  // Records which source (create, or a specific book) the form was last initialised from.
+  const [syncedFor, setSyncedFor] = useState<string | null>(null);
 
   const { data: book, isLoading: bookLoading } = useBook(isEdit ? bookId : null);
   const { data: changes, isLoading: changesLoading } = useBookChanges(isEdit ? bookId : null, {
@@ -43,22 +55,43 @@ export function BookDialog({ open, mode, bookId, onClose }: BookDialogProps) {
   const createBook = useCreateBook();
   const updateBook = useUpdateBook(bookId ?? 0);
   const saving = createBook.isPending || updateBook.isPending;
+  const saveError = createBook.error ?? updateBook.error;
 
-  // Populate the form whenever the dialog opens (from the loaded book in edit mode, blank in create).
-  useEffect(() => {
-    if (!open) return;
+  // Initialise the form when the dialog opens or switches books. Done during render (React's
+  // "adjust state during render" pattern) rather than in an effect, so opening the dialog doesn't
+  // trigger a cascading setState-in-effect. The guards keep it from looping.
+  const formSource = !open
+    ? null
+    : mode === 'create'
+      ? 'create'
+      : book
+        ? `edit:${book.id}`
+        : null; // edit mode, book not loaded yet — wait
+
+  if (!open) {
+    // Forget the last sync once closed so reopening always re-initialises the form.
+    if (syncedFor !== null) setSyncedFor(null);
+  } else if (formSource !== null && formSource !== syncedFor) {
+    setSyncedFor(formSource);
     setChangesPage(1);
-    if (isEdit && book) {
-      setForm({
-        title: book.title,
-        shortDescription: book.shortDescription,
-        publishDate: book.publishDate,
-        authorNames: book.authors.map((a) => a.name),
-      });
-    } else if (mode === 'create') {
-      setForm(emptyForm);
-    }
-  }, [open, isEdit, book, mode]);
+    setForm(
+      book
+        ? {
+            title: book.title,
+            shortDescription: book.shortDescription,
+            publishDate: book.publishDate,
+            authorNames: book.authors.map((a) => a.name),
+          }
+        : emptyForm,
+    );
+  }
+
+  // Clear any prior save error on close so a stale failure doesn't carry into the next open.
+  const handleClose = () => {
+    createBook.reset();
+    updateBook.reset();
+    onClose();
+  };
 
   const pageCount = changes ? Math.max(1, Math.ceil(changes.totalCount / CHANGES_PAGE_SIZE)) : 1;
   const valid = form.title.trim() !== '' && form.shortDescription.trim() !== '' && form.publishDate !== '';
@@ -77,17 +110,22 @@ export function BookDialog({ open, mode, bookId, onClose }: BookDialogProps) {
   const title = useMemo(() => (mode === 'create' ? 'Add book' : 'Edit book'), [mode]);
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
       <DialogTitle>{title}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>
+          {saveError ? (
+            <Alert severity="error" data-testid="save-error">
+              {saveError instanceof Error ? saveError.message : 'Failed to save the book.'}
+            </Alert>
+          ) : null}
           <TextField
             label="Title"
             value={form.title}
             onChange={(e) => update({ title: e.target.value })}
             required
             fullWidth
-            slotProps={{ htmlInput: { 'data-testid': 'book-title-input' } }}
+            slotProps={{ htmlInput: { 'data-testid': 'book-title-input', maxLength: TITLE_MAX_LENGTH } }}
           />
           <TextField
             label="Short description"
@@ -97,7 +135,9 @@ export function BookDialog({ open, mode, bookId, onClose }: BookDialogProps) {
             fullWidth
             multiline
             minRows={2}
-            slotProps={{ htmlInput: { 'data-testid': 'book-description-input' } }}
+            slotProps={{
+              htmlInput: { 'data-testid': 'book-description-input', maxLength: DESCRIPTION_MAX_LENGTH },
+            }}
           />
           <TextField
             label="Publish date"
@@ -134,7 +174,7 @@ export function BookDialog({ open, mode, bookId, onClose }: BookDialogProps) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} data-testid="dialog-cancel">
+        <Button onClick={handleClose} data-testid="dialog-cancel">
           Close
         </Button>
         <Button
