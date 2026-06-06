@@ -62,10 +62,12 @@ public class BookService : IBookService
             BookAuthors = authors.Select(a => new BookAuthor { Author = a }).ToList()
         };
 
-        _db.Books.Add(book);
-        await _db.SaveChangesAsync(ct); // assigns book.Id
+        // Attach the "Created" row through the navigation so the book and its first change are
+        // inserted in a single (transactional) SaveChanges — never a book without its history.
+        // EF fixes up BookChange.BookId from the generated Book.Id, so the factory's 0 is irrelevant.
+        book.Changes.Add(BookChangeFactory.CreatedChange(book, timestamp));
 
-        _db.BookChanges.Add(BookChangeFactory.CreatedChange(book, timestamp));
+        _db.Books.Add(book);
         await _db.SaveChangesAsync(ct);
 
         return (await GetBookAsync(book.Id, ct))!;

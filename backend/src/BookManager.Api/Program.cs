@@ -1,6 +1,7 @@
 using System.Reflection;
 using BookManager.Api.Data;
 using BookManager.Api.Data.Seed;
+using BookManager.Api.Infrastructure;
 using BookManager.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
 builder.Services.AddScoped<IBookService, BookService>();
+
+// Turn unhandled exceptions into a generic 500 ProblemDetails instead of leaking internals.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -37,6 +42,8 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
     await DataSeeder.SeedAsync(db);
 }
+
+app.UseExceptionHandler();
 
 app.UseSwagger();
 app.UseSwaggerUI();
