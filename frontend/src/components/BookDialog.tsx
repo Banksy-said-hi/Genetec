@@ -11,7 +11,7 @@ import {
   Stack,
   TextField,
 } from '@mui/material';
-import type { BookInput } from '../api/types';
+import type { BookInput, DialogMode } from '../api/types';
 import { useBook, useBookChanges, useCreateBook, useUpdateBook } from '../hooks/useBooks';
 import { AuthorAutocomplete } from './AuthorAutocomplete';
 import { BookCard } from './BookCard';
@@ -19,12 +19,13 @@ import { ChangeHistory } from './ChangeHistory';
 
 interface BookDialogProps {
   open: boolean;
-  mode: 'create' | 'edit';
+  mode: DialogMode;
   bookId: number | null;
   onClose: () => void;
 }
 
-const CHANGES_PAGE_SIZE = 5;
+// Show up to 10 changes per page; the pager only appears when a book has more than 10.
+const CHANGES_PAGE_SIZE = 10;
 const emptyForm: BookInput = { title: '', shortDescription: '', publishDate: '', authorNames: [] };
 
 export function BookDialog({ open, mode, bookId, onClose }: BookDialogProps) {
