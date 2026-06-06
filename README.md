@@ -113,3 +113,23 @@ List responses use the envelope `{ items, totalCount, page, pageSize }`.
   time-ordered, the timeline groups them deterministically without groups spanning a page boundary.
 - **Loading states**: skeletons for known-shape content (book table, change list); spinners for
   actions (author search, Save button).
+
+## Known limitations / future improvements
+
+Deliberately out of scope for this exercise; called out as places to harden next:
+
+- **Concurrency.** No optimistic-concurrency token. Two concurrent edits to the same book can
+  lose an update (and the diff is computed against stale state, so the history could be wrong),
+  and concurrent creation of the *same new author* can race the unique index on `Author.Name`.
+  Fix: an `xmin`/rowversion concurrency token plus a retry, or `INSERT ... ON CONFLICT` for the
+  find-or-create, and map the conflict to a `409`.
+- **Frontend error detail.** The API returns `ProblemDetails`, but the client currently surfaces
+  a generic status-based message and does not parse it. Fix: parse `title`/`detail`/`errors` to
+  show field-level `400` validation messages inline.
+- **Search wildcard escaping.** `search` is interpolated into the `ILIKE` pattern without escaping
+  `%`, `_`, or `\`, so those characters act as wildcards. Fix: escape LIKE metacharacters before
+  building the pattern.
+- **Operational defaults (demo-grade).** CORS is wide open (`AllowAnyOrigin/Header/Method` — lock
+  to the SPA origin in prod); migrations run on startup (`MigrateAsync()` — race-prone across
+  instances, should be a gated deploy step); the DB connection string with credentials is committed
+  in `appsettings.json` (should come from environment/secrets).
