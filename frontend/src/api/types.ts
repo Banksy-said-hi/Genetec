@@ -1,3 +1,9 @@
+/** Sort direction shared by list/query params and the book-list sort controls. */
+export type SortDir = 'asc' | 'desc';
+
+/** Mode of the book create/edit dialog. */
+export type DialogMode = 'create' | 'edit';
+
 export interface Author {
   id: number;
   name: string;
@@ -41,7 +47,7 @@ export interface BookListParams {
   page: number;
   pageSize: number;
   sort?: string;
-  dir?: 'asc' | 'desc';
+  dir?: SortDir;
   search?: string;
 }
 
@@ -51,5 +57,5 @@ export interface ChangesParams {
   field?: string;
   from?: string;
   to?: string;
-  dir?: 'asc' | 'desc';
+  dir?: SortDir;
 }
