@@ -40,7 +40,8 @@ describe('BookList', () => {
     setup();
     expect(screen.getByText('The Hobbit')).toBeInTheDocument();
     expect(screen.getByText('War and Peace')).toBeInTheDocument();
-    expect(screen.getAllByText('Jane Doe').length).toBeGreaterThan(0);
+    // One author cell per row — exactly two, not merely "at least one".
+    expect(screen.getAllByText('Jane Doe')).toHaveLength(2);
   });
 
   it('requests the next page when the pagination control is used', async () => {
@@ -64,7 +65,8 @@ describe('BookList', () => {
   it('reports search input changes', async () => {
     const props = setup();
     await userEvent.type(screen.getByTestId('book-search'), 'hob');
-    expect(props.onSearchChange).toHaveBeenCalled();
+    // Input is controlled with search='' so each keystroke reports a single char; first is 'h'.
+    expect(props.onSearchChange).toHaveBeenCalledWith('h');
   });
 
   it('invokes onRowClick with the book id when a row is clicked', async () => {

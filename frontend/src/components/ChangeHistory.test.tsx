@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ChangeHistory } from './ChangeHistory';
 import type { BookChange } from '../api/types';
 
@@ -44,5 +45,20 @@ describe('ChangeHistory', () => {
   it('shows an empty message when there are no changes', () => {
     render(<ChangeHistory changes={[]} />);
     expect(screen.getByText('No changes recorded.')).toBeInTheDocument();
+  });
+
+  it('renders the table view when toggled', async () => {
+    render(
+      <ChangeHistory changes={[change({ field: 'Title', description: 'Title was changed to "B"' })]} />,
+    );
+
+    // Timeline (default) has no column headers; the table view does.
+    expect(screen.queryByText('Field')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('view-table'));
+
+    // The table-only "Field" header proves we switched, and the row still renders.
+    expect(screen.getByText('Field')).toBeInTheDocument();
+    expect(screen.getByText('Title was changed to "B"')).toBeInTheDocument();
   });
 });

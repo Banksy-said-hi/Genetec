@@ -164,6 +164,30 @@ public class QueryTests : IAsyncLifetime
         Assert.Equal("2024-03-09", change.Date);
     }
 
+    // ---------- create ----------
+
+    [Fact]
+    public async Task CreateBook_persists_book_and_exactly_one_Created_change()
+    {
+        var created = await _service.CreateBookAsync(new BookInput
+        {
+            Title = "The Hobbit",
+            ShortDescription = "There and back again.",
+            PublishDate = new DateOnly(1937, 9, 21),
+            AuthorNames = new[] { "Tolkien" },
+        }, default);
+
+        Assert.Equal("The Hobbit", created.Title);
+        Assert.Equal("Tolkien", Assert.Single(created.Authors).Name);
+
+        // The book and its single "Created" row commit together (atomic create).
+        var history = await _service.GetChangesAsync(created.Id, new ChangesQuery(), default);
+        var change = Assert.Single(history!.Items);
+        Assert.Equal("Created", change.ChangeType);
+        Assert.Equal("Book", change.Field);
+        Assert.Equal("Book \"The Hobbit\" was created", change.Description);
+    }
+
     // ---------- seeding helpers ----------
 
     private async Task SeedBooksAsync(params string[] titles)
