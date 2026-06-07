@@ -8,9 +8,26 @@ server-side pagination, filtering, ordering, and date-grouped history.
 - **Database** — PostgreSQL (via docker-compose)
 - **Tests** — xUnit + Testcontainers (backend), Vitest + Testing Library (frontend), Playwright (e2e)
 
-All pagination/filtering/ordering is executed **server-side in Postgres**. The current state of
-each book lives in `Books`; every edit is diffed and written as one row per changed field into
-`BookChanges`, with a precomputed human-readable sentence (e.g. `Title was changed to "The Hobbit"`).
+## Run
+
+Requires .NET 10, Node 20+, and Docker. The API applies migrations and seeds 200 sample books on first run.
+- Postgres → :5432
+- API → :5021 (Swagger at /swagger)
+- Web → :5173
+
+```bash
+docker compose up -d                                                     
+cd backend  && dotnet run --project src/BookManager.Api --launch-profile http   
+cd frontend && npm install && npm run dev                                
+```
+
+## Tests
+
+```bash
+cd backend  && dotnet test     # xUnit + Testcontainers (needs Docker)
+cd frontend && npm test        # Vitest
+./scripts/run-e2e.sh           # Playwright e2e (first run: npx playwright install chromium)
+```
 
 ## Architecture
 
@@ -70,26 +87,6 @@ sequenceDiagram
   API-->>FE: history (filtered / ordered / grouped by date)
 ```
 
-## Run
-
-Requires .NET 10, Node 20+, and Docker.
-
-```bash
-docker compose up -d                                                     # Postgres → :5432
-cd backend  && dotnet run --project src/BookManager.Api --launch-profile http   # API → :5021 (Swagger at /swagger)
-cd frontend && npm install && npm run dev                                # Web → :5173
-```
-
-The API applies migrations and seeds 200 sample books on first run.
-
-## Tests
-
-```bash
-cd backend  && dotnet test     # xUnit + Testcontainers (needs Docker)
-cd frontend && npm test        # Vitest
-./scripts/run-e2e.sh           # Playwright e2e (first run: npx playwright install chromium)
-```
-
 ## API endpoints
 
 | Method | Route | Description |
@@ -101,35 +98,14 @@ cd frontend && npm test        # Vitest
 | GET | `/books/{id}/changes?page&pageSize&field&from&to&dir` | Change history (server-side filter/order/page) |
 | GET | `/authors?search=` | Author search backing the autocomplete |
 
-List responses use the envelope `{ items, totalCount, page, pageSize }`.
-
-## Notes / design decisions
-
-- **Change log, not event sourcing.** Current state in `Books`; append-only history in `BookChanges`.
-  One row per changed field; multiple fields edited in one save share a single UTC timestamp.
-- **Authors** are supplied by name; the server find-or-creates them, so the autocomplete can pass an
-  existing author or a brand-new typed name. The PUT diff compares author sets by name.
-- **Grouping by date** is computed server-side onto each change row (`date`); since rows come back
-  time-ordered, the timeline groups them deterministically without groups spanning a page boundary.
-- **Loading states**: skeletons for known-shape content (book table, change list); spinners for
-  actions (author search, Save button).
-
 ## Known limitations / future improvements
 
 Deliberately out of scope for this exercise; called out as places to harden next:
 
 - **Concurrency.** No optimistic-concurrency token. Two concurrent edits to the same book can
-  lose an update (and the diff is computed against stale state, so the history could be wrong),
-  and concurrent creation of the *same new author* can race the unique index on `Author.Name`.
-  Fix: an `xmin`/rowversion concurrency token plus a retry, or `INSERT ... ON CONFLICT` for the
-  find-or-create, and map the conflict to a `409`.
+  lose an update.
 - **Frontend error detail.** The API returns `ProblemDetails`, but the client currently surfaces
-  a generic status-based message and does not parse it. Fix: parse `title`/`detail`/`errors` to
-  show field-level `400` validation messages inline.
+  a generic status-based message and does not parse it. 
 - **Search wildcard escaping.** `search` is interpolated into the `ILIKE` pattern without escaping
-  `%`, `_`, or `\`, so those characters act as wildcards. Fix: escape LIKE metacharacters before
-  building the pattern.
-- **Operational defaults (demo-grade).** CORS is wide open (`AllowAnyOrigin/Header/Method` — lock
-  to the SPA origin in prod); migrations run on startup (`MigrateAsync()` — race-prone across
-  instances, should be a gated deploy step); the DB connection string with credentials is committed
-  in `appsettings.json` (should come from environment/secrets).
+  `%`, `_`, or `\`, so those characters act as wildcards.
+- **Operational defaults (demo-grade).** CORS is wide open, migrations run on startup, and DB credentials committed in appsettings.json.
